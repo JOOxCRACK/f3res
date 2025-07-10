@@ -1,8 +1,7 @@
 const puppeteer = require("puppeteer");
-const email = process.argv[2];
-const password = process.argv[3];
+const axios = require("axios");
 
-(async () => {
+async function loginOkCupid(email, password) {
   const browser = await puppeteer.launch({
     headless: true,
     args: ["--no-sandbox", "--disable-setuid-sandbox"]
@@ -16,44 +15,55 @@ const password = process.argv[3];
       timeout: 60000,
     });
 
-    // ⛳️ الخطوة الأهم - إرسال الطلب من داخل الصفحة
-    const result = await page.evaluate(async (email, password) => {
-      const res = await fetch("https://e2p-okapi.api.okcupid.com/graphql?operationName=WebLoginWithEmail", {
-        method: "POST",
+    // ناخد الكوكيز
+    const cookies = await page.cookies();
+    const cookieHeader = cookies.map(c => `${c.name}=${c.value}`).join("; ");
+
+    // نبعَت ريكوست من Node بالكوكيز
+    const graphqlRes = await axios.post(
+      "https://e2p-okapi.api.okcupid.com/graphql?operationName=WebLoginWithEmail",
+      {
+        operationName: "WebLoginWithEmail",
+        variables: {
+          input: {
+            email,
+            password
+          }
+        },
+        query: `mutation WebLoginWithEmail($input: AuthEmailLoginInput!) {
+          authEmailLogin(input: $input) {
+            encryptedUserId
+            status
+            token
+            __typename
+          }
+        }`
+      },
+      {
         headers: {
+          "cookie": cookieHeader,
+          "authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...", // توكن حقيقي
           "content-type": "application/json",
           "origin": "https://www.okcupid.com",
           "referer": "https://www.okcupid.com/",
-          "authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...", // ✅ توكن كامل
           "x-okcupid-auth-v": "1",
           "x-okcupid-device-id": "1e3b554a70cf70ed",
           "x-okcupid-locale": "en",
           "x-okcupid-platform": "DESKTOP",
-          "x-okcupid-version": "204"
-        },
-        body: JSON.stringify({
-          operationName: "WebLoginWithEmail",
-          variables: {
-            input: { email, password }
-          },
-          query: `mutation WebLoginWithEmail($input: AuthEmailLoginInput!) {
-            authEmailLogin(input: $input) {
-              encryptedUserId
-              status
-              token
-              __typename
-            }
-          }`
-        })
-      });
-      return await res.json();
-    }, email, password);
+          "x-okcupid-version": "204",
+          "user-agent": await page.evaluate(() => navigator.userAgent)
+        }
+      }
+    );
 
-    // 👇 دي بتطبع من Puppeteer على لوج Render
-    console.log("✅ Login response:", JSON.stringify(result, null, 2));
+    console.log("✅ Login Response:", JSON.stringify(graphqlRes.data, null, 2));
+    return graphqlRes.data;
   } catch (err) {
-    console.error("❌ Puppeteer error:", err.message);
+    console.error("❌ Error:", err.message);
+    return null;
   } finally {
     await browser.close();
   }
-})();
+}
+
+module.exports = loginOkCupid;
