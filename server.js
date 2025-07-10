@@ -1,6 +1,8 @@
 const express = require("express");
 const axios = require("axios");
 const app = express();
+
+// السماح بقراءة JSON من الريكوست
 app.use(express.json());
 
 app.post("/login", async (req, res) => {
@@ -28,7 +30,7 @@ app.post("/login", async (req, res) => {
       },
       {
         headers: {
-          "authorization": "Bearer YOUR_VALID_BEARER_TOKEN",
+          "authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJjb3JlYXBpIiwiYXVkIjoiY29yZWFwaSIsInBsYXRmb3JtSWQiOjExMiwic2Vzc2lvbklkIjoiNTljNGMxYWQtMmY0ZC00MDk1LWIzOWYtMTM4MGY1MjAwZmQwIiwic2l0ZUNvZGUiOjM2LCJTZXJ2ZXJJZCI6NzksInZlciI6MTIsImlzc1NyYyI6MjcsImVudiI6MSwic2NvcGUiOlsxXSwiYXV0aF90aW1lIjpudWxsLCJpYXQiOjE3NTIxNTc3MzAsImV4cCI6MTc1MjE2MDQzMH0.OMVJSMJ8hcrjD3zCd61XJCfdTeRUO_QuTftIEoIM70M", // ✅ حط التوكن الحقيقي هنا
           "content-type": "application/json",
           "origin": "https://www.okcupid.com",
           "referer": "https://www.okcupid.com/",
@@ -52,5 +54,8 @@ app.post("/login", async (req, res) => {
   }
 });
 
+// ✅ هنا السطر الأهم عشان السيرفر يشتغل
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`🚀 Server is running on port ${PORT}`);
+});
