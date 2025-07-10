@@ -1,28 +1,10 @@
 const puppeteer = require("puppeteer");
-
 const email = process.argv[2];
 const password = process.argv[3];
 
 (async () => {
-  const browser = await puppeteer.launch({ headless: true }); // خليها false لو عايز تشوف المتصفح
+  const browser = await puppeteer.launch({ headless: false, slowMo: 30 });
   const page = await browser.newPage();
-
-  // استمع لكل الريسبونسات اللي بتيجي للصفحة
-  page.on("response", async (response) => {
-    const req = response.request();
-    const url = req.url();
-
-    // فلترة الريكوست اللي فيه login GraphQL
-    if (url.includes("/graphql?operationName=WebLoginWithEmail")) {
-      console.log(`📩 Response from: ${url}`);
-      try {
-        const json = await response.json();
-        console.log("🔍 Full response JSON:\n", JSON.stringify(json, null, 2));
-      } catch (err) {
-        console.error("❌ Failed to parse JSON:", err.message);
-      }
-    }
-  });
 
   try {
     await page.goto("https://www.okcupid.com/login", {
@@ -30,21 +12,27 @@ const password = process.argv[3];
       timeout: 60000,
     });
 
-    await page.type("input[name='username']", email, { delay: 50 });
-    await page.type("input[name='password']", password, { delay: 50 });
+    // انتظر ظهور الفورم فعلاً
+    await page.waitForSelector("input[name='username']");
+    await page.waitForSelector("input[name='password']");
+
+    // املى البيانات
+    await page.type("input[name='username']", email);
+    await page.type("input[name='password']", password);
     await page.click("button[type='submit']");
 
-    // انتظر شوية عشان الريسبونس ييجي
-    await page.waitForTimeout(7000);
+    // انتظر التحويل أو ظهور رسالة خطأ
+    await page.waitForTimeout(6000);
 
-    const currentURL = page.url();
-    if (currentURL.includes("okcupid.com/home")) {
-      console.log("✅ Login successful! Redirected to home page.");
-    } else {
-      console.log("❌ Login failed or redirected to unexpected page.");
-    }
+    const url = page.url();
+    const pageContent = await page.content();
+
+    console.log("📍 Current URL:", url);
+
+    // اطبع أول 1000 حرف من الصفحة بعد محاولة الدخول
+    console.log("🔍 HTML Preview:\n", pageContent.substring(0, 1000));
   } catch (err) {
-    console.error("❌ Puppeteer error:", err.message);
+    console.error("❌ Error:", err.message);
   } finally {
     await browser.close();
   }
