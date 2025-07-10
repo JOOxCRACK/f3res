@@ -12,27 +12,27 @@ const password = process.argv[3];
       timeout: 60000,
     });
 
-    // انتظر ظهور الفورم فعلاً
     await page.waitForSelector("input[name='username']");
     await page.waitForSelector("input[name='password']");
 
-    // املى البيانات
-    await page.type("input[name='username']", email);
-    await page.type("input[name='password']", password);
-    await page.click("button[type='submit']");
+    // املى الإيميل والباسورد
+    await page.type("input[name='username']", email, { delay: 50 });
+    await page.type("input[name='password']", password, { delay: 50 });
 
-    // انتظر التحويل أو ظهور رسالة خطأ
-    await page.waitForTimeout(6000);
+    // شغل كود تسجيل الدخول من داخل الصفحة (simulate real app behavior)
+    await page.evaluate(() => {
+      const btn = document.querySelector("button[type='submit']");
+      if (btn) btn.click();
+    });
+
+    await page.waitForTimeout(7000);
 
     const url = page.url();
-    const pageContent = await page.content();
-
-    console.log("📍 Current URL:", url);
-
-    // اطبع أول 1000 حرف من الصفحة بعد محاولة الدخول
-    console.log("🔍 HTML Preview:\n", pageContent.substring(0, 1000));
+    const content = await page.content();
+    console.log("📍 URL:", url);
+    console.log("📄 HTML starts with:\n", content.substring(0, 500));
   } catch (err) {
-    console.error("❌ Error:", err.message);
+    console.error("❌ ERROR:", err.message);
   } finally {
     await browser.close();
   }
