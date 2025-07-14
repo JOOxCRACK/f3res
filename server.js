@@ -1,7 +1,11 @@
 const express = require("express");
 const axios = require("axios");
-const puppeteer = require("puppeteer");
 const path = require("path");
+
+const puppeteer = require("puppeteer-extra");
+const StealthPlugin = require("puppeteer-extra-plugin-stealth");
+
+puppeteer.use(StealthPlugin());
 
 const app = express();
 
@@ -15,19 +19,28 @@ app.get("/", (req, res) => {
 
 app.post("/login", async (req, res) => {
   const { email, password } = req.body;
-  console.log("Login request from:", email);
+  console.log("📥 Login request from:", email);
 
   try {
     const browser = await puppeteer.launch({
-      headless: true,
+      headless: "new",
       args: ["--no-sandbox", "--disable-setuid-sandbox"]
     });
+
     const page = await browser.newPage();
-    await page.goto("https://www.okcupid.com/login", { waitUntil: "networkidle2" });
+
+    // 🛡️ Set stronger headers
+    await page.setExtraHTTPHeaders({
+      'Accept-Language': 'en-US,en;q=0.9',
+    });
+
+    // ✅ Bypass Cloudflare
+    await page.goto("https://www.okcupid.com/login", { waitUntil: "networkidle2", timeout: 60000 });
 
     const cookies = await page.cookies();
     const cookieHeader = cookies.map(c => `${c.name}=${c.value}`).join("; ");
     const userAgent = await page.evaluate(() => navigator.userAgent);
+
     await browser.close();
 
     const response = await axios.post(
@@ -62,13 +75,11 @@ app.post("/login", async (req, res) => {
     );
 
     res.json(response.data);
-  } catch (error) {
-    console.error("❌ Error:", error.message);
-    res.status(500).json({ error: error.message });
+  } catch (err) {
+    console.error("❌ Error:", err.message);
+    res.status(500).json({ error: "Cloudflare block or login failed" });
   }
 });
 
-const PORT = process.env.PORT;
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
